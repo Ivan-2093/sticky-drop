@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+  <style type="text/css">
+    body {
+      background: #222;
+    }
+    .layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="spaces" class="layer"></canvas>
+<canvas id="cards" class="layer"></canvas>
+<canvas id="card" class="layer"></canvas>
+
+<script>
+
+var CARD_WIDTH = 70;
+var CARD_HEIGHT = 100;
+
+var spacesCanvas = document.getElementById('spaces');
+var dragCanvas = document.getElementById('card');
+var cardCanvas = document.getElementById('cards');
+
+var spacesContext = spacesCanvas.getContext('2d');
+var dragContext = dragCanvas.getContext('2d');
+var cardContext = cardCanvas.getContext('2d');
+
+var state = {
+  spaces: [
+    {x: 100, y: 200, card: null},
+    {x: 200, y: 200, card: null},
+    {x: 300, y: 200, card: null},
+  ],
+  cards: [],
+  holdingCard: null,
+  isMouseDown: false,
+  cursorOffset: null
+};
+
+function drawSpace(space) {
+  var ctx = spacesContext;
+  ctx.fillStyle = '#555555';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#999999';
+  ctx.fillRect(space.x, space.y, CARD_WIDTH, CARD_HEIGHT);
+  ctx.strokeRect(space.x, space.y, CARD_WIDTH, CARD_HEIGHT);
+}
+
+function drawCards() {
+  cardContext.clearRect(0, 0, cardCanvas.width, cardCanvas.height);
+
+  state.cards.forEach(function(card) {
+    if (card !== state.holdingCard) {
+      drawCard(card);
+    }
+  });
+}
+
+function drawCard(card, ctx) {
+  if (!ctx) {
+    ctx = cardContext;
+  }
+
+  ctx.fillStyle = 'white';
+  ctx.strokeStyle = '#999999';
+  ctx.fillRect(card.x, card.y, CARD_WIDTH, CARD_HEIGHT);
+}
+
+function drawSpaces() {
+  state.spaces.forEach(function(space) {
+    drawSpace(space);
+  });
+}
+
+// ------------
+
+window.onresize = function() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+
+  spacesCanvas.width = w;
+  spacesCanvas.height = h;
+
+  dragCanvas.width = w;
+  dragCanvas.height = h;
+
+  cardCanvas.width = w;
+  cardCanvas.height = h;
+
+  drawSpaces();
+  drawCards();
+}
+
+// ------------
+
+
+window.onload = function() {
+  var cards = [];
+
+  for (var index = 0; index < 10; index++) {
+    cards.push({
+      x: window.innerWidth * Math.random(),
+      y: window.innerHeight * Math.random()
+    });
+  }
+
+  state.cards = cards;
+
+  window.onresize();
+}
+
+dragCanvas.onmousedown = function(e) {
+  var card;
+
+  state.isMouseDown = true;
+
+  for (var index = 0; index < state.cards.length; index++) {
+    card = state.cards[index];
+
+    if (e.clientX >= card.x && e.clientX < CARD_WIDTH + card.x
+      && e.clientY >= card.y && e.clientY < CARD_HEIGHT + card.y
+    ) {
+      state.holdingCard = card;
+      state.cursorOffset = {
+        x: e.clientX - card.x,
+        y: e.clientY - card.y
+      };
+
+      drawCards();
+      dragContext.clearRect(0, 0,
+        dragCanvas.width, dragCanvas.height
+      );
+      drawCard(state.holdingCard, dragContext);
+      break;
+    }
+  }
+}
+
+dragCanvas.onmouseup = function(e) {
+  var didMatch = false;
+
+  if (state.cursorOffset != null) {
+    var card = state.holdingCard;
+    state.cursorOffset = null;
+
+    for (var index = 0; index < state.spaces.length; index++) {
+      var s = state.spaces[index];
+
+      if (Math.abs(card.x - s.x) < (CARD_WIDTH / 1.5)
+        && Math.abs(card.y - s.y) < (CARD_HEIGHT / 1.5)
+      ) {
+        card.x = s.x;
+        card.y = s.y;
+        didMatch = true;
+        state.holdingCard = null;
+        break;
+      }
+    }
+  }
+
+  if (didMatch) {
+    cardContext.clearRect(0, 0,
+      cardCanvas.width,
+      cardCanvas.height
+    );
+    dragContext.clearRect(0, 0,
+      dragCanvas.width,
+      dragCanvas.height
+    );
+    drawCards();
+  }
+}
+
+dragCanvas.onmousemove = function(e) {
+  if (state.cursorOffset && state.holdingCard) {
+    var card = state.holdingCard;
+    card.x = e.clientX - state.cursorOffset.x;
+    card.y = e.clientY - state.cursorOffset.y;
+
+    dragContext.clearRect(0, 0, dragCanvas.width, dragCanvas.height);
+    drawCard(card, dragContext);
+  }
+}
+
+</script>
+
+</body>
+</html>
